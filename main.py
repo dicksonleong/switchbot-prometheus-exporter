@@ -6,6 +6,7 @@ from typing import override, Iterable
 
 import click
 from bleak import BleakScanner, BLEDevice, AdvertisementData
+from bleak.backends.bluezdbus.scanner import BlueZDiscoveryFilters, BlueZScannerArgs
 from prometheus_client import Metric, start_http_server
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from prometheus_client.registry import Collector
@@ -80,7 +81,8 @@ def configure_logging(debug: bool):
 
 
 async def find_device(address: str, timeout: float) -> tuple[BLEDevice, AdvertisementData] | None:
-    async with BleakScanner() as scanner:
+    scanner_args = BlueZScannerArgs(filters=BlueZDiscoveryFilters(Transport="le", Pattern=address))
+    async with BleakScanner(bluez=scanner_args) as scanner:
         try:
             async with asyncio.timeout(timeout):
                 async for device, data in scanner.advertisement_data():
