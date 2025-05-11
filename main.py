@@ -10,6 +10,10 @@ from prometheus_client import Metric, start_http_server
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from prometheus_client.registry import Collector
 
+
+SERVICE_UUID = "0000fd3d-0000-1000-8000-00805f9b34fb"
+
+
 class SwitchBotCollector(Collector):
     def __init__(self, device_addr: str, scan_timeout: float):
         self._device_addr = device_addr
@@ -88,8 +92,11 @@ async def find_device(address: str, timeout: float) -> tuple[BLEDevice, Advertis
 
 
 # https://github.com/OpenWonderLabs/node-switchbot/blob/bd44206094127456f2b9ec451fafaeb9a77bd787/src/device.ts#L2678
-def parse_service_data(data: AdvertisementData) -> SensorData:
-    service_data = data.service_data["0000fd3d-0000-1000-8000-00805f9b34fb"]
+def parse_service_data(ad_data: AdvertisementData) -> SensorData:
+    if SERVICE_UUID not in ad_data.service_data:
+        raise RuntimeError(f"Malformed ad data: {ad_data}")
+
+    service_data = ad_data.service_data[SERVICE_UUID]
     logging.debug("Service data: %s", service_data)
 
     byte2 = service_data[2]
