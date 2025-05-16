@@ -35,7 +35,11 @@ class SwitchBotCollector(Collector):
         logging.debug(f"Device {device.address} found, name: {device.name}, details: {device.details}")
 
         sensor_data = parse_service_data(ad_data)
-        logging.info(f"Obtained sensor data from {self._device_addr}: {sensor_data}, used {(end_time - start_time)}s")
+        if sensor_data is None:
+            logging.warning(f"Unable to parse service data from advertisement data: {ad_data}")
+            return
+
+        logging.info(f"Retrieved sensor data from {self._device_addr}: {sensor_data}, used {(end_time - start_time)}s")
 
         rssi = GaugeMetricFamily("switchbot_rssi", "Device received signal strength indicator (RSSI)",labels=["device"])
         rssi.add_metric([device.address], ad_data.rssi, end_time)
@@ -94,9 +98,9 @@ async def find_device(address: str, timeout: float) -> tuple[BLEDevice, Advertis
 
 
 # https://github.com/OpenWonderLabs/node-switchbot/blob/bd44206094127456f2b9ec451fafaeb9a77bd787/src/device.ts#L2678
-def parse_service_data(ad_data: AdvertisementData) -> SensorData:
+def parse_service_data(ad_data: AdvertisementData) -> SensorData | None:
     if SERVICE_UUID not in ad_data.service_data:
-        raise RuntimeError(f"Malformed ad data: {ad_data}")
+        return None
 
     service_data = ad_data.service_data[SERVICE_UUID]
     logging.debug("Service data: %s", service_data)
