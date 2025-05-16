@@ -95,6 +95,9 @@ async def find_device(address: str, timeout: float) -> tuple[BLEDevice, Advertis
                 return None
         except asyncio.TimeoutError:
             return None
+        except Exception as e:
+            logging.warn(f"Unexpected error when finding device: {e}")
+            return None
 
 
 # https://github.com/OpenWonderLabs/node-switchbot/blob/bd44206094127456f2b9ec451fafaeb9a77bd787/src/device.ts#L2678
