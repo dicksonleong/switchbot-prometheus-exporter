@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import signal
 import time
 from dataclasses import dataclass
 from typing import override, Iterable
+from wsgiref.simple_server import WSGIServer
 
 import click
 from bleak import BleakScanner, BLEDevice, AdvertisementData
@@ -122,6 +124,11 @@ def parse_service_data(ad_data: AdvertisementData) -> SensorData | None:
     return SensorData(battery, temp_c, humidity)
 
 
+def shutdown(code: int, server: WSGIServer):
+    logging.info(f"Shutting down server (code: {code})")
+    server.shutdown()
+
+
 @click.command()
 @click.option("--device-addr", required=True, help="BLE device address", type=str)
 @click.option("--metrics-port", default=8080, help="Prometheus metrics port", type=int, show_default=True)
@@ -135,7 +142,8 @@ def main(device_addr: str, metrics_port: int, scan_timeout: int, debug: bool):
     server, t = start_http_server(metrics_port)
     logging.info(f"Started Prometheus HTTP server on port {metrics_port}")
 
-    server.serve_forever()
+    signal.signal(signal.SIGTERM, lambda code, _: shutdown(code, server))
+    t.join()
 
 
 if __name__ == "__main__":
